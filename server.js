@@ -10,12 +10,13 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: [
-  "http://localhost:3000",             // local React app
-  "http://192.168.0.197:3000",  // production Vercel frontend
-  "https://voice-calling.netlify.app"       // any other frontend you want
-], // frontend origin
+  "http://localhost:3000",          
+  "http://192.168.0.197:3000",  
+  "https://voice-calling.netlify.app"      
+], 
     methods: ["GET", "POST"],
   },
+   transports: ["websocket"],
 });
 
 let waitingUsers = []; // queue for users searching for call
