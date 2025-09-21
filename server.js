@@ -9,7 +9,11 @@ app.use(cors());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // frontend origin
+    origin: [
+  "http://localhost:3000",             // local React app
+  "http://192.168.0.197:3000",  // production Vercel frontend
+  "https://voice-calling.netlify.app"       // any other frontend you want
+], // frontend origin
     methods: ["GET", "POST"],
   },
 });
