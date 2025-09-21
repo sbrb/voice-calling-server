@@ -13,17 +13,10 @@ const allowedOrigins = [
   "https://voice-calling.netlify.app",
 ];
 
+// ✅ Apply CORS middleware
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like curl, Postman)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1 || origin.includes("vercel.app")) {
-        return callback(null, true);
-      } else {
-        return callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true,
   })
@@ -36,7 +29,7 @@ app.get("/test", (req, res) => {
 
 const server = http.createServer(app);
 
-// Socket.IO setup
+// ✅ Socket.IO setup
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
@@ -71,6 +64,7 @@ io.on("connection", (socket) => {
 
   // Forward WebRTC signals (offer, answer, ICE)
   socket.on("signal", ({ signal, partnerId }) => {
+    // console.log(signal)
     io.to(partnerId).emit("signal", { signal, from: socket.id });
   });
 
