@@ -1,22 +1,47 @@
+// src/server.js
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 
 const app = express();
-app.use(cors());
+
+// Allow multiple frontend origins
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://192.168.0.197:3000",
+  "https://voice-calling.netlify.app",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like curl, Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1 || origin.includes("vercel.app")) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
+
+// ✅ Test route
+app.get("/test", (req, res) => {
+  res.json({ success: true, message: "Server is running fine 🚀" });
+});
 
 const server = http.createServer(app);
+
+// Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: [
-  "http://localhost:3000",          
-  "http://192.168.0.197:3000",  
-  "https://voice-calling.netlify.app"      
-], 
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
   },
-   transports: ["websocket"],
 });
 
 let waitingUsers = []; // queue for users searching for call
@@ -28,21 +53,17 @@ io.on("connection", (socket) => {
   socket.on("join-call", () => {
     console.log(`${socket.id} is searching for a call...`);
 
-    // If there's someone already waiting, connect them
     if (waitingUsers.length > 0) {
       const partnerId = waitingUsers.shift();
-
-      // Notify both clients they found a partner
       io.to(socket.id).emit("call-found", { partnerId });
       io.to(partnerId).emit("call-found", { partnerId: socket.id });
     } else {
-      // Add this user to waiting list
       waitingUsers.push(socket.id);
       io.to(socket.id).emit("searching");
     }
   });
 
-  // User cancels search before matching
+  // User cancels search
   socket.on("cancel-call", () => {
     console.log(`${socket.id} canceled searching`);
     waitingUsers = waitingUsers.filter((id) => id !== socket.id);
@@ -62,15 +83,13 @@ io.on("connection", (socket) => {
   // Handle user disconnect
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
-
-    // Remove from waiting list
     waitingUsers = waitingUsers.filter((id) => id !== socket.id);
-
-    // Notify partner if in a call (optional — you can track active calls)
     io.emit("call-ended"); // fallback: end call if one disconnects
   });
 });
 
-server.listen(5000, () => {
-  console.log("Server running on http://localhost:5000");
+// Use process.env.PORT for deployment
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+  console.log(`✅ Server running on http://localhost:${PORT}`);
 });
